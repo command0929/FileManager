@@ -7,7 +7,7 @@ importClass(java.net.URL)
 /**
  * 
  * @param {string} path - file Path
- * @param {*} bytes - bytes
+ * @param {byte[]} bytes - bytes
  * @returns {object} - value
  */ 
 
