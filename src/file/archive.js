@@ -1,106 +1,65 @@
-importPackage(java.io);
-importPackage(java.util.zip);
+var ZipFile = Packages.net.lingala.zip4j.core.ZipFile;
+var ZipParameters = Packages.net.lingala.zip4j.model.ZipParameters;
+var Zip4jConstants = Packages.net.lingala.zip4j.util.Zip4jConstants;
+var File = Packages.java.io.File;
 
 /**
+ * arhchive file or directory
  * 
- * @param {string} path - archive path
- * @param {string} toPath - result path
- * @param {string} password - encrypt password , not required
- * @returns {object} - value
+ * @param {string} path - The path of the file or directory to be zipped.
+ * @param {string} toPath - The destination path where the zip file will be created.
+ * @param {string} [password] - Optional. The password to encrypt the zip file. If not provided, the zip file will not be encrypted.
+ * @returns {object} - The result object containing:
+ *  - {boolean} result - Indicates if the zipping was successful.
+ *  - {string} reason - The reason for failure if the zipping was not successful.
+ *  - {array} path - An array containing the source path and the destination path.
+ *  - {object} v - Additional information:
+ *    - {string} fileType - The type of the source (file or directory).
+ *    - {string} zipType - The type of the zip (extension of the zip file, typically "zip").
+ *    - {string} [password] - The password used for encryption, if provided.
+ *    - {object} [v] - If an error occurs, this will contain the error object.
  */
-
 function zip(path, toPath, password) {
-    let file = new File(path);
-    let zFile = new File(toPath);
-
-    if (!file.exists()) {
+    if(!File(path).exists() || File(toPath).exists()) {
         return {
             result: false,
-            reason: "not exists",
+            reason: "path does not exist or destination path already exists",
             path: [path, toPath],
-            v: {},
+            v: {}
         };
     }
-
     try {
-        let fos = new FileOutputStream(zFile);
-        let zos = new ZipOutputStream(fos);
+        var zipParameters = new ZipParameters();
+        zipParameters.setCompressionMethod(Zip4jConstants.COMP_DEFLATE);
+        zipParameters.setCompressionLevel(Zip4jConstants.DEFLATE_LEVEL_ULTRA);
+        zipParameters.setEncryptFiles(password ? true : false);
+        zipParameters.setEncryptionMethod(Zip4jConstants.ENC_METHOD_AES);
+        zipParameters.setAesKeyStrength(Zip4jConstants.AES_STRENGTH_256);
+        if (password) zipParameters.setPassword(password);
+        
+        var finalPath = toPath.split("/").slice(-1).includes(".") ? toPath : toPath + ".zip";
+        var zipFile = new ZipFile(finalPath);
+        
+        zipFile.addFile(new File(path), zipParameters);
 
-        if (password != null && password != "") {
-            zos.setMethod(ZipOutputStream.DEFLATED);
-            zos.setEncryptionMethod(ZipOutputStream.STANDARD_ENCRYPTION);
-            zos.setPassword(password.split(""));
-        }
-
-            if (file.isDirectory()) {
-                zipDirectory(file, file.getName(), zos);
-            } else if (file.isFile()) {
-                zipFile(file, file.getName(), zos);
+        return {
+            result: true,
+            reason: "",
+            path: [path, toPath],
+            v: {
+                fileType: File(path).isFile() ? "file" : "directory",
+                zipType: finalPath.split(".").slice(-1).join(""),
+                password: password
             }
-
-            zos.close();
-            fos.close();
-
-            return {
-                result: true,
-                reason: "",
-                path: [path, toPath],
-                v: {
-                    type: file.isFile() ? "file" : "directory",
-                    password: password ? password : ""
-                }
-            };
+        };
     } catch (err) {
         return {
             result: false,
-            reason: "caught error while archive",
+            reason: "caught error while archiving",
             path: [path, toPath],
             v: err
         };
     }
-}
-
-/**
- * 
- * @param {object} file - java file
- * @param {string} fileName - fileName
- * @param {object} zos - new ZipOutputStream()
- */
-
-function zipFile(file, fileName, zos) {
-    var fis = new FileInputStream(file);
-    var zipEntry = new ZipEntry(fileName);
-    zos.putNextEntry(zipEntry);
-
-    var bytes = java.lang.reflect.Array.newInstance(java.lang.Byte.TYPE, 1024);
-    var length;
-    while ((length = fis.read(bytes)) >= 0) {
-        zos.write(bytes, 0, length);
-    }
-
-    zos.closeEntry();
-    fis.close();
-}
-
-/**
- * 
- * @param {object} file - java file
- * @param {string} fileName - fileName
- * @param {object} zos - new ZipOutputStream()
- */
-
-function zipDirectory(file, fileName, zos) {
-    var files = file.listFiles();
-    if (files != null) {
-        for (var i = 0; i < files.length; i++) {
-            var file = files[i];
-            if (file.isDirectory()) {
-                zipDirectory(file, fileName + File.separator + file.getName(), zos);
-            } else {
-                zipFile(file, fileName + File.separator + file.getName(), zos);
-            }
-        }
-    }
-}
+};
 
 module.exports = zip;

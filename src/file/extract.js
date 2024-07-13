@@ -1,88 +1,56 @@
-importPackage(java.io);
-importPackage(java.util.zip);
+var ZipFile = Packages.net.lingala.zip4j.core.ZipFile;
+var File = Packages.java.io.File;
 
 /**
+ * unzip a file
  * 
- * @param {string} zipFile - zip file path
- * @param {string} toPath - extracted zip file path
- * @param {string?} password - decrypt key, optional
- * @returns {object} - value
+ * @param {string} path - The path of the zip file to be extracted.
+ * @param {string} toPath - The destination path where the extracted files will be placed.
+ * @param {string} [password] - Optional. The password to decrypt the zip file. If not provided, the zip file will be extracted without decryption.
+ * @returns {object} - The result object containing:
+ *  - {boolean} result - Indicates if the extraction was successful.
+ *  - {string} reason - The reason for failure if the extraction was not successful.
+ *  - {array} path - An array containing the source path and the destination path.
+ *  - {object} v - Additional information:
+ *    - {string} zipType - The type of the zip (extension of the zip file, typically "zip").
+ *    - {string} [password] - The password used for decryption, if provided.
+ *    - {object} [v] - If an error occurs, this will contain the error object.
  */
-
-function unzip(zipFile, toPath, password) {
-    if (!new File(zipFile).exists() || new File(zipFile).isDirectory() || !toPath) {
+function unzip(path, toPath, password) {
+    if(!File(path).exists() || File(toPath).exists()) {
         return {
             result: false,
-            reason: "not exists or directory or not toPath",
-            path: [zipFile, toPath],
-            v: {},
+            reason: "path does not exist or destination path already exists",
+            path: [path, toPath],
+            v: {}
         };
     }
-
     try {
-        var file = new File(toPath);
-        if (!file.exists()) {
-            (new File(toPath.split("/").slice(0, -1).join("/") || toPath)).mkdirs();
-        }
-
-        var zipFileObj;
-        if (password) {
-            zipFileObj = new ZipFile(zipFile);
-        } else {
-            zipFileObj = new ZipFile(zipFile, password.split(""));
-        }
-
-        var entries = zipFileObj.entries();
+        var zipFile = new ZipFile(path);
         
-        while (entries.hasMoreElements()) {
-            var entry = entries.nextElement();
-            var path = toPath + File.separator + entry.getName();
-
-            if (!entry.isDirectory()) {
-                extractFile(zipFileObj, entry, path);
-            } else {
-                var dir = new File(path);
-                dir.mkdirs();
-            }
+        if (zipFile.isEncrypted()) {
+            zipFile.setPassword(password);
         }
-
-        zipFileObj.close();
+        
+        zipFile.extractAll(toPath);
 
         return {
             result: true,
             reason: "",
-            path: [zipFile, toPath],
+            path: [path, toPath],
             v: {
-                zipType: new File(zipFile).getName().split(".").slice(-1).join("")
+                zipType: path.split(".").slice(-1).join(""),
+                password: password
             }
         };
     } catch (err) {
         return {
             result: false,
             reason: "caught error while extracting",
-            path: [zipFile, toPath],
+            path: [path, toPath],
             v: err
         };
     }
-}
-
-/**
- * 
- * @param {object} zipFileObj - zipFileObject
- * @param {*} entry - entry
- * @param {string} filePath - file path
- */
-
-function extractFile(zipFileObj, entry, filePath) {
-    var bos = new BufferedOutputStream(new FileOutputStream(filePath));
-    var buffer = java.lang.reflect.Array.newInstance(java.lang.Byte.TYPE, 1024);
-    var zipStream = zipFileObj.getInputStream(entry);
-    var len;
-    while ((len = zipStream.read(buffer)) > 0) {
-        bos.write(buffer, 0, len);
-    }
-    bos.close();
-    zipStream.close();
-}
+};
 
 module.exports = unzip;
