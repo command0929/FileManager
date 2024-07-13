@@ -29,18 +29,18 @@ function zip(path, toPath, password) {
         };
     }
     try {
-        var zipParameters = new ZipParameters();
-        zipParameters.setCompressionMethod(Zip4jConstants.COMP_DEFLATE);
-        zipParameters.setCompressionLevel(Zip4jConstants.DEFLATE_LEVEL_ULTRA);
-        zipParameters.setEncryptFiles(password ? true : false);
-        zipParameters.setEncryptionMethod(Zip4jConstants.ENC_METHOD_AES);
-        zipParameters.setAesKeyStrength(Zip4jConstants.AES_STRENGTH_256);
-        if (password) zipParameters.setPassword(password);
+        var parameters = new ZipParameters();
+        parameters.setCompressionMethod(Zip4jConstants.COMP_DEFLATE);
+        parameters.setCompressionLevel(Zip4jConstants.DEFLATE_LEVEL_ULTRA);
+        parameters.setEncryptFiles(password ? true : false);
+        parameters.setEncryptionMethod(Zip4jConstants.ENC_METHOD_AES);
+        parameters.setAesKeyStrength(Zip4jConstants.AES_STRENGTH_256);
+        if (password) parameters.setPassword(password);
         
         var finalPath = toPath.split("/").slice(-1).includes(".") ? toPath : toPath + ".zip";
         var zipFile = new ZipFile(finalPath);
         
-        zipFile.addFile(new File(path), zipParameters);
+        zipFile.addFile(new File(path), parameters);
 
         return {
             result: true,
